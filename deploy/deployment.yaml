@@ -29,7 +29,7 @@ spec:
       containers:
         - name: nginx
           # Replaced with an immutable GHCR digest by the first successful main build.
-          image: ghcr.io/zhenyapav/web-app-test:bootstrap
+          image: ghcr.io/zhenyapav/web-app-test@sha256:2bc78905f55337df1abc1e1142657320afc951a5da0cb7857c88d41e3022e764
           ports:
             - name: http
               containerPort: 8080
