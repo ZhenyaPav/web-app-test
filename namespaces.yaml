@@ -1,0 +1,5 @@
+# Namespaces are created separately to not give ArgoCD project ns access.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: web-app-test

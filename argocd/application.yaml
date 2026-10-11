@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: web-app-test
+  namespace: argocd
+spec:
+  project: web-app-lab
+  source:
+    repoURL: https://github.com/ZhenyaPav/web-app-test.git
+    targetRevision: main
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: web-app-test
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m

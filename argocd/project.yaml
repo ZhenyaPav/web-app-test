@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: web-app-lab
+  namespace: argocd
+spec:
+  description: One repository, one workload namespace, two resource types.
+  sourceRepos:
+    - https://github.com/ZhenyaPav/web-app-test.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: web-app-test
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: apps
+      kind: Deployment
+    - group: ""
+      kind: Service

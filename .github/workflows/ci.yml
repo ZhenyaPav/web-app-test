@@ -1,0 +1,54 @@
+name: Build and promote
+on:
+  pull_request:
+    paths: [app/**, Dockerfile, nginx.conf, .dockerignore, scripts/**, .github/workflows/**]
+  push:
+    branches: [main]
+    paths: [app/**, Dockerfile, nginx.conf, .dockerignore, scripts/**, .github/workflows/**]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: web-app-test-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      packages: write
+    env:
+      IMAGE: ghcr.io/zhenyapav/web-app-test
+      APP_URL: ${{ vars.APP_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Check image promotion guard
+        run: python3 scripts/check.py
+      - name: Build and smoke-test Nginx container
+        run: ./scripts/build.sh "$IMAGE:sha-$GITHUB_SHA" "$GITHUB_SHA"
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish image
+        id: image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          docker push "$IMAGE:sha-$GITHUB_SHA"
+          digest=$(docker buildx imagetools inspect "$IMAGE:sha-$GITHUB_SHA" --format '{{json .Manifest}}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["digest"])')
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - name: Promote image in Git
+        id: promote
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: ./scripts/promote.sh "$GITHUB_SHA" "$DIGEST"
+      - name: Verify public deployment (optional APP_URL variable)
+        if: steps.promote.outputs.promoted == 'true' && env.APP_URL != ''
+        run: ./scripts/wait-for-version.sh "$APP_URL" "$GITHUB_SHA"

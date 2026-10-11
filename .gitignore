@@ -1,0 +1,6 @@
+__pycache__/
+.env
+*.local.yml
+*.local.yaml
+*.token
+kubeconfig*
